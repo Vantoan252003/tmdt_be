@@ -1,0 +1,325 @@
+<!DOCTYPE html>
+<html lang="vi" xmlns:th="http://www.thymeleaf.org">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Quản lý Products</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <style>
+        body { background-color: #f8f9fa; }
+        .sidebar { background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); min-height: 100vh; color: white; }
+        .sidebar .nav-link { color: rgba(255,255,255,0.8); padding: 15px 20px; transition: all 0.3s; }
+        .sidebar .nav-link:hover { color: white; background-color: rgba(255,255,255,0.1); }
+        .card { border: none; border-radius: 10px; box-shadow: 0 2px 10px rgba(0,0,0,0.1); }
+    </style>
+</head>
+<body>
+    <div class="container-fluid">
+        <div class="row">
+            <!-- Include Sidebar Fragment -->
+            <div th:replace="~{admin/fragments/sidebar :: sidebar('products')}"></div>
+
+            <main class="col-md-10 ms-sm-auto px-md-4">
+                <div class="d-flex justify-content-between flex-wrap flex-md-nowrap align-items-center pt-3 pb-2 mb-3 border-bottom">
+                    <h1 class="h2">Quản lý Products</h1>
+                    <button class="btn btn-primary" onclick="showAddModal()">
+                        <i class="fas fa-plus me-2"></i>Thêm Product
+                    </button>
+                </div>
+
+                <div class="card">
+                    <div class="card-body">
+                        <table class="table table-hover">
+                            <thead>
+                                <tr>
+                                    <th>Tên sản phẩm</th>
+                                    <th>Shop</th>
+                                    <th>Category</th>
+                                    <th>Giá</th>
+                                    <th>Số lượng</th>
+                                    <th>Đã bán</th>
+                                    <th>Trạng thái</th>
+                                    <th>Hành động</th>
+                                </tr>
+                            </thead>
+                            <tbody id="productTableBody"></tbody>
+                        </table>
+                    </div>
+                </div>
+            </main>
+        </div>
+    </div>
+
+    <div class="modal fade" id="productModal" tabindex="-1">
+        <div class="modal-dialog modal-lg">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title" id="modalTitle">Thêm Product</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                </div>
+                <div class="modal-body">
+                    <form id="productForm">
+                        <input type="hidden" id="productId">
+                        <div class="row">
+                            <div class="col-md-6 mb-3">
+                                <label class="form-label">Tên sản phẩm <span class="text-danger">*</span></label>
+                                <input type="text" class="form-control" id="productName" required>
+                            </div>
+                            <div class="col-md-6 mb-3">
+                                <label class="form-label">Shop <span class="text-danger">*</span></label>
+                                <select class="form-control" id="shopId" required>
+                                    <option value="">Chọn shop...</option>
+                                </select>
+                            </div>
+                        </div>
+                        <div class="row">
+                            <div class="col-md-6 mb-3">
+                                <label class="form-label">Category <span class="text-danger">*</span></label>
+                                <select class="form-control" id="categoryId" required>
+                                    <option value="">Chọn category...</option>
+                                </select>
+                            </div>
+                            <div class="col-md-6 mb-3">
+                                <label class="form-label">Giá <span class="text-danger">*</span></label>
+                                <input type="number" step="0.01" class="form-control" id="price" required>
+                            </div>
+                        </div>
+                        <div class="row">
+                            <div class="col-md-6 mb-3">
+                                <label class="form-label">Giảm giá (%)</label>
+                                <input type="number" step="0.01" class="form-control" id="discountPercentage" value="0">
+                            </div>
+                            <div class="col-md-6 mb-3">
+                                <label class="form-label">Số lượng <span class="text-danger">*</span></label>
+                                <input type="number" class="form-control" id="stockQuantity" required value="0">
+                            </div>
+                        </div>
+                        <div class="row">
+                            <div class="col-md-6 mb-3">
+                                <label class="form-label">Trọng lượng (kg)</label>
+                                <input type="number" step="0.01" class="form-control" id="weight">
+                            </div>
+                            <div class="col-md-6 mb-3">
+                                <label class="form-label">Trạng thái <span class="text-danger">*</span></label>
+                                <select class="form-control" id="status" required>
+                                    <option value="DRAFT">DRAFT</option>
+                                    <option value="ACTIVE">ACTIVE</option>
+                                    <option value="OUT_OF_STOCK">OUT_OF_STOCK</option>
+                                    <option value="DISCONTINUED">DISCONTINUED</option>
+                                </select>
+                            </div>
+                        </div>
+                        <div class="mb-3">
+                            <label class="form-label">Mô tả</label>
+                            <textarea class="form-control" id="description" rows="3"></textarea>
+                        </div>
+                    </form>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Đóng</button>
+                    <button type="button" class="btn btn-primary" onclick="saveProduct()">Lưu</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+    <script>
+        const token = localStorage.getItem('token');
+        let modal;
+        let shops = [];
+        let categories = [];
+
+        function logout() {
+            localStorage.clear();
+            window.location.href = '/login';
+        }
+
+        async function loadShops() {
+            try {
+                const response = await fetch('/api/admin/shops', {
+                    headers: { 'Authorization': 'Bearer ' + token }
+                });
+                const data = await response.json();
+                shops = data.data;
+                
+                const shopSelect = document.getElementById('shopId');
+                shopSelect.innerHTML = '<option value="">Chọn shop...</option>';
+                shops.forEach(shop => {
+                    shopSelect.innerHTML += `<option value="${shop.shopId}">${shop.shopName}</option>`;
+                });
+            } catch (error) {
+                console.error('Error loading shops:', error);
+            }
+        }
+
+        async function loadCategories() {
+            try {
+                const response = await fetch('/api/admin/categories', {
+                    headers: { 'Authorization': 'Bearer ' + token }
+                });
+                const data = await response.json();
+                categories = data.data;
+                
+                const categorySelect = document.getElementById('categoryId');
+                categorySelect.innerHTML = '<option value="">Chọn category...</option>';
+                categories.forEach(cat => {
+                    categorySelect.innerHTML += `<option value="${cat.categoryId}">${cat.categoryName}</option>`;
+                });
+            } catch (error) {
+                console.error('Error loading categories:', error);
+            }
+        }
+
+        async function loadProducts() {
+            try {
+                const response = await fetch('/api/admin/products', {
+                    headers: { 'Authorization': 'Bearer ' + token }
+                });
+                const data = await response.json();
+                
+                const tbody = document.getElementById('productTableBody');
+                tbody.innerHTML = '';
+                
+                data.data.forEach(product => {
+                    const shop = shops.find(s => s.shopId === product.shopId);
+                    const category = categories.find(c => c.categoryId === product.categoryId);
+                    const statusBadge = product.status === 'ACTIVE' ? 'bg-success' : 
+                                       product.status === 'DRAFT' ? 'bg-secondary' : 
+                                       product.status === 'OUT_OF_STOCK' ? 'bg-warning' : 'bg-danger';
+                    tbody.innerHTML += `
+                        <tr>
+                            <td>${product.productName}</td>
+                            <td>${shop ? shop.shopName : product.shopId}</td>
+                            <td>${category ? category.categoryName : product.categoryId}</td>
+                            <td>${new Intl.NumberFormat('vi-VN', { style: 'currency', currency: 'VND' }).format(product.price)}</td>
+                            <td>${product.stockQuantity}</td>
+                            <td>${product.soldQuantity || 0}</td>
+                            <td><span class="badge ${statusBadge}">${product.status}</span></td>
+                            <td>
+                                <button class="btn btn-sm btn-warning me-1" onclick="editProduct('${product.productId}')">
+                                    <i class="fas fa-edit"></i>
+                                </button>
+                                <button class="btn btn-sm btn-danger" onclick="deleteProduct('${product.productId}')">
+                                    <i class="fas fa-trash"></i>
+                                </button>
+                            </td>
+                        </tr>
+                    `;
+                });
+            } catch (error) {
+                console.error('Error:', error);
+            }
+        }
+
+        function showAddModal() {
+            document.getElementById('modalTitle').textContent = 'Thêm Product';
+            document.getElementById('productForm').reset();
+            document.getElementById('productId').value = '';
+            document.getElementById('stockQuantity').value = '0';
+            document.getElementById('discountPercentage').value = '0';
+            modal = new bootstrap.Modal(document.getElementById('productModal'));
+            modal.show();
+        }
+
+        async function editProduct(id) {
+            try {
+                const response = await fetch(`/api/admin/products/${id}`, {
+                    headers: { 'Authorization': 'Bearer ' + token }
+                });
+                const data = await response.json();
+                const product = data.data;
+                
+                document.getElementById('modalTitle').textContent = 'Sửa Product';
+                document.getElementById('productId').value = product.productId;
+                document.getElementById('productName').value = product.productName;
+                document.getElementById('shopId').value = product.shopId;
+                document.getElementById('categoryId').value = product.categoryId;
+                document.getElementById('price').value = product.price;
+                document.getElementById('discountPercentage').value = product.discountPercentage || 0;
+                document.getElementById('stockQuantity').value = product.stockQuantity || 0;
+                document.getElementById('weight').value = product.weight || '';
+                document.getElementById('status').value = product.status;
+                document.getElementById('description').value = product.description || '';
+                
+                modal = new bootstrap.Modal(document.getElementById('productModal'));
+                modal.show();
+            } catch (error) {
+                console.error('Error:', error);
+                alert('Có lỗi xảy ra khi tải thông tin sản phẩm!');
+            }
+        }
+
+        async function saveProduct() {
+            const productId = document.getElementById('productId').value;
+            const data = {
+                productName: document.getElementById('productName').value,
+                shopId: document.getElementById('shopId').value,
+                categoryId: document.getElementById('categoryId').value,
+                price: parseFloat(document.getElementById('price').value),
+                discountPercentage: parseFloat(document.getElementById('discountPercentage').value) || 0,
+                stockQuantity: parseInt(document.getElementById('stockQuantity').value) || 0,
+                status: document.getElementById('status').value,
+                description: document.getElementById('description').value
+            };
+            
+            const weight = document.getElementById('weight').value;
+            if (weight) {
+                data.weight = parseFloat(weight);
+            }
+            
+            try {
+                const url = productId ? `/api/admin/products/${productId}` : '/api/admin/products';
+                const method = productId ? 'PUT' : 'POST';
+                
+                const response = await fetch(url, {
+                    method: method,
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'Authorization': 'Bearer ' + token
+                    },
+                    body: JSON.stringify(data)
+                });
+                
+                if (response.ok) {
+                    modal.hide();
+                    loadProducts();
+                    alert('Lưu thành công!');
+                } else {
+                    const errorData = await response.json();
+                    alert('Có lỗi xảy ra: ' + (errorData.message || 'Unknown error'));
+                }
+            } catch (error) {
+                console.error('Error:', error);
+                alert('Có lỗi xảy ra!');
+            }
+        }
+
+        async function deleteProduct(id) {
+            if (!confirm('Bạn có chắc muốn xóa sản phẩm này?')) return;
+            
+            try {
+                const response = await fetch(`/api/admin/products/${id}`, {
+                    method: 'DELETE',
+                    headers: { 'Authorization': 'Bearer ' + token }
+                });
+                
+                if (response.ok) {
+                    loadProducts();
+                    alert('Xóa thành công!');
+                }
+            } catch (error) {
+                console.error('Error:', error);
+                alert('Có lỗi xảy ra!');
+            }
+        }
+
+        document.addEventListener('DOMContentLoaded', async () => {
+            await loadShops();
+            await loadCategories();
+            await loadProducts();
+        });
+    </script>
+</body>
+</html>

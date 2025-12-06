@@ -1,0 +1,101 @@
+<!DOCTYPE html>
+<html lang="vi" xmlns:th="http://www.thymeleaf.org">
+<head>
+    <meta charset="UTF-8">
+</head>
+<body>
+    <!-- Sidebar Fragment -->
+    <nav class="col-md-2 d-md-block sidebar" th:fragment="sidebar(activeMenu)">
+        <div class="position-sticky pt-3">
+            <h3 class="text-center mb-4"><i class="fas fa-shopping-bag me-2"></i>Admin Panel</h3>
+            <ul class="nav flex-column">
+                <li class="nav-item">
+                    <a class="nav-link" th:classappend="${activeMenu == 'dashboard'} ? 'active'" href="/admin/dashboard">
+                        <i class="fas fa-home me-2"></i> Dashboard
+                    </a>
+                </li>
+                <li class="nav-item">
+                    <a class="nav-link" th:classappend="${activeMenu == 'users'} ? 'active'" href="/admin/users">
+                        <i class="fas fa-users me-2"></i> Users
+                    </a>
+                </li>
+                <li class="nav-item">
+                    <a class="nav-link" th:classappend="${activeMenu == 'addresses'} ? 'active'" href="/admin/addresses">
+                        <i class="fas fa-map-marker-alt me-2"></i> Addresses
+                    </a>
+                </li>
+                <li class="nav-item">
+                    <a class="nav-link" th:classappend="${activeMenu == 'categories'} ? 'active'" href="/admin/categories">
+                        <i class="fas fa-list me-2"></i> Categories
+                    </a>
+                </li>
+                <li class="nav-item">
+                    <a class="nav-link" th:classappend="${activeMenu == 'shops'} ? 'active'" href="/admin/shops">
+                        <i class="fas fa-store me-2"></i> Shops
+                    </a>
+                </li>
+                <li class="nav-item">
+                    <a class="nav-link" th:classappend="${activeMenu == 'products'} ? 'active'" href="/admin/products">
+                        <i class="fas fa-box me-2"></i> Products
+                    </a>
+                </li>
+                <li class="nav-item">
+                    <a class="nav-link" th:classappend="${activeMenu == 'product-images'} ? 'active'" href="/admin/product-images">
+                        <i class="fas fa-images me-2"></i> Product Images
+                    </a>
+                </li>
+                <li class="nav-item">
+                    <a class="nav-link" th:classappend="${activeMenu == 'product-variants'} ? 'active'" href="/admin/product-variants">
+                        <i class="fas fa-tag me-2"></i> Product Variants
+                    </a>
+                </li>
+                <li class="nav-item">
+                    <a class="nav-link" th:classappend="${activeMenu == 'carts'} ? 'active'" href="/admin/carts">
+                        <i class="fas fa-shopping-cart me-2"></i> Carts
+                    </a>
+                </li>
+                <li class="nav-item">
+                    <a class="nav-link" th:classappend="${activeMenu == 'orders'} ? 'active'" href="/admin/orders">
+                        <i class="fas fa-receipt me-2"></i> Orders
+                    </a>
+                </li>
+                <li class="nav-item">
+                    <a class="nav-link" th:classappend="${activeMenu == 'reviews'} ? 'active'" href="/admin/reviews">
+                        <i class="fas fa-star me-2"></i> Reviews
+                    </a>
+                </li>
+                <li class="nav-item">
+                    <a class="nav-link" th:classappend="${activeMenu == 'vouchers'} ? 'active'" href="/admin/vouchers">
+                        <i class="fas fa-ticket-alt me-2"></i> Vouchers
+                    </a>
+                </li>
+                <li class="nav-item">
+                    <a class="nav-link" th:classappend="${activeMenu == 'banners'} ? 'active'" href="/admin/banners">
+                        <i class="fas fa-image me-2"></i> Banners
+                    </a>
+                </li>
+                <li class="nav-item">
+                    <a class="nav-link" th:classappend="${activeMenu == 'notifications'} ? 'active'" href="/admin/notifications">
+                        <i class="fas fa-bell me-2"></i> Notifications
+                    </a>
+                </li>
+                <li class="nav-item">
+                    <a class="nav-link" th:classappend="${activeMenu == 'favorites'} ? 'active'" href="/admin/favorites">
+                        <i class="fas fa-heart me-2"></i> Favorites
+                    </a>
+                </li>
+                <li class="nav-item">
+                    <a class="nav-link" th:classappend="${activeMenu == 'search-history'} ? 'active'" href="/admin/search-history">
+                        <i class="fas fa-history me-2"></i> Search History
+                    </a>
+                </li>
+                <li class="nav-item mt-3">
+                    <a class="nav-link" href="#" onclick="logout()">
+                        <i class="fas fa-sign-out-alt me-2"></i> Đăng xuất
+                    </a>
+                </li>
+            </ul>
+        </div>
+    </nav>
+</body>
+</html>

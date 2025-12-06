@@ -1,0 +1,252 @@
+<!DOCTYPE html>
+<html lang="vi" xmlns:th="http://www.thymeleaf.org">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Quản lý Users</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <style>
+        body { background-color: #f8f9fa; }
+        .sidebar {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            color: white;
+        }
+        .sidebar .nav-link {
+            color: rgba(255,255,255,0.8);
+            padding: 15px 20px;
+            transition: all 0.3s;
+        }
+        .sidebar .nav-link:hover {
+            color: white;
+            background-color: rgba(255,255,255,0.1);
+        }
+        .card {
+            border: none;
+            border-radius: 10px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+        }
+    </style>
+</head>
+<body>
+    <div class="container-fluid">
+        <div class="row">
+            <!-- Include Sidebar Fragment -->
+            <div th:replace="~{admin/fragments/sidebar :: sidebar('users')}"></div>
+
+            <!-- Main content -->
+            <main class="col-md-10 ms-sm-auto px-md-4">
+                <div class="d-flex justify-content-between flex-wrap flex-md-nowrap align-items-center pt-3 pb-2 mb-3 border-bottom">
+                    <h1 class="h2">Quản lý Users</h1>
+                    <button class="btn btn-primary" onclick="showAddModal()">
+                        <i class="fas fa-plus me-2"></i>Thêm User
+                    </button>
+                </div>
+
+                <div class="card">
+                    <div class="card-body">
+                        <table class="table table-hover">
+                            <thead>
+                                <tr>
+                                    <th>Avatar</th>
+                                    <th>Email</th>
+                                    <th>Họ tên</th>
+                                    <th>SĐT</th>
+                                    <th>Role</th>
+                                    <th>Trạng thái</th>
+                                    <th>Ngày tạo</th>
+                                    <th>Hành động</th>
+                                </tr>
+                            </thead>
+                            <tbody id="userTableBody"></tbody>
+                        </table>
+                    </div>
+                </div>
+            </main>
+        </div>
+    </div>
+
+    <!-- Modal -->
+    <div class="modal fade" id="userModal" tabindex="-1">
+        <div class="modal-dialog">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title" id="modalTitle">Thêm User</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                </div>
+                <div class="modal-body">
+                    <form id="userForm">
+                        <input type="hidden" id="userId">
+                        <div class="mb-3">
+                            <label class="form-label">Email</label>
+                            <input type="email" class="form-control" id="email" required>
+                        </div>
+                        <div class="mb-3">
+                            <label class="form-label">Họ tên</label>
+                            <input type="text" class="form-control" id="fullName" required>
+                        </div>
+                        <div class="mb-3">
+                            <label class="form-label">Số điện thoại</label>
+                            <input type="text" class="form-control" id="phoneNumber">
+                        </div>
+                        <div class="mb-3">
+                            <label class="form-label">Role</label>
+                            <select class="form-control" id="role" required>
+                                <option value="ADMIN">ADMIN</option>
+                                <option value="SELLER">SELLER</option>
+                                <option value="CUSTOMER">CUSTOMER</option>
+                            </select>
+                        </div>
+                        <div class="mb-3">
+                            <label class="form-label">Trạng thái</label>
+                            <select class="form-control" id="status" required>
+                                <option value="ACTIVE">ACTIVE</option>
+                                <option value="INACTIVE">INACTIVE</option>
+                                <option value="BANNED">BANNED</option>
+                            </select>
+                        </div>
+                    </form>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Đóng</button>
+                    <button type="button" class="btn btn-primary" onclick="saveUser()">Lưu</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+    <script>
+        const token = localStorage.getItem('token');
+        let modal;
+
+        function logout() {
+            localStorage.clear();
+            window.location.href = '/login';
+        }
+
+        async function loadUsers() {
+            try {
+                const response = await fetch('/api/admin/users', {
+                    headers: { 'Authorization': 'Bearer ' + token }
+                });
+                const data = await response.json();
+                
+                const tbody = document.getElementById('userTableBody');
+                tbody.innerHTML = '';
+                
+                data.data.forEach(user => {
+                    tbody.innerHTML += `
+                        <tr>
+                            <td><img src="${user.avatarUrl || 'https://via.placeholder.com/40'}" style="width:40px;height:40px;object-fit:cover;border-radius:50%;" onerror="this.src='https://via.placeholder.com/40'"></td>
+                            <td>${user.email}</td>
+                            <td>${user.fullName}</td>
+                            <td>${user.phoneNumber || '-'}</td>
+                            <td><span class="badge bg-info">${user.role}</span></td>
+                            <td><span class="badge bg-success">${user.status}</span></td>
+                            <td>${new Date(user.createdAt).toLocaleDateString('vi-VN')}</td>
+                            <td>
+                                <button class="btn btn-sm btn-warning" onclick="editUser('${user.userId}')">
+                                    <i class="fas fa-edit"></i>
+                                </button>
+                                <button class="btn btn-sm btn-danger" onclick="deleteUser('${user.userId}')">
+                                    <i class="fas fa-trash"></i>
+                                </button>
+                            </td>
+                        </tr>
+                    `;
+                });
+            } catch (error) {
+                console.error('Error loading users:', error);
+            }
+        }
+
+        function showAddModal() {
+            document.getElementById('modalTitle').textContent = 'Thêm User';
+            document.getElementById('userForm').reset();
+            document.getElementById('userId').value = '';
+            modal = new bootstrap.Modal(document.getElementById('userModal'));
+            modal.show();
+        }
+
+        async function editUser(id) {
+            try {
+                const response = await fetch(`/api/admin/users/${id}`, {
+                    headers: { 'Authorization': 'Bearer ' + token }
+                });
+                const data = await response.json();
+                const user = data.data;
+                
+                document.getElementById('modalTitle').textContent = 'Sửa User';
+                document.getElementById('userId').value = user.userId;
+                document.getElementById('email').value = user.email;
+                document.getElementById('fullName').value = user.fullName;
+                document.getElementById('phoneNumber').value = user.phoneNumber || '';
+                document.getElementById('role').value = user.role;
+                document.getElementById('status').value = user.status;
+                
+                modal = new bootstrap.Modal(document.getElementById('userModal'));
+                modal.show();
+            } catch (error) {
+                console.error('Error loading user:', error);
+            }
+        }
+
+        async function saveUser() {
+            const userId = document.getElementById('userId').value;
+            const userData = {
+                email: document.getElementById('email').value,
+                fullName: document.getElementById('fullName').value,
+                phoneNumber: document.getElementById('phoneNumber').value,
+                role: document.getElementById('role').value,
+                status: document.getElementById('status').value
+            };
+            
+            try {
+                const url = userId ? `/api/admin/users/${userId}` : '/api/admin/users';
+                const method = userId ? 'PUT' : 'POST';
+                
+                const response = await fetch(url, {
+                    method: method,
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'Authorization': 'Bearer ' + token
+                    },
+                    body: JSON.stringify(userData)
+                });
+                
+                if (response.ok) {
+                    modal.hide();
+                    loadUsers();
+                    alert('Lưu thành công!');
+                }
+            } catch (error) {
+                console.error('Error saving user:', error);
+                alert('Có lỗi xảy ra!');
+            }
+        }
+
+        async function deleteUser(id) {
+            if (!confirm('Bạn có chắc muốn xóa user này?')) return;
+            
+            try {
+                const response = await fetch(`/api/admin/users/${id}`, {
+                    method: 'DELETE',
+                    headers: { 'Authorization': 'Bearer ' + token }
+                });
+                
+                if (response.ok) {
+                    loadUsers();
+                    alert('Xóa thành công!');
+                }
+            } catch (error) {
+                console.error('Error deleting user:', error);
+                alert('Có lỗi xảy ra!');
+            }
+        }
+
+        document.addEventListener('DOMContentLoaded', loadUsers);
+    </script>
+</body>
+</html>

@@ -1,0 +1,142 @@
+<!DOCTYPE html>
+<html lang="vi" xmlns:th="http://www.thymeleaf.org">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Quản lý Search History</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <style>
+        body { background-color: #f8f9fa; }
+        .sidebar { background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); min-height: 100vh; color: white; position: fixed; width: 250px; }
+        .sidebar .nav-link { color: rgba(255,255,255,0.8); padding: 12px 20px; transition: all 0.3s; border-radius: 5px; margin: 2px 10px; }
+        .sidebar .nav-link:hover { color: white; background-color: rgba(255,255,255,0.1); }
+        .sidebar .nav-link.active { color: white; background-color: rgba(255,255,255,0.2); }
+        .main-content { margin-left: 250px; padding: 20px; }
+        .card { border: none; border-radius: 10px; box-shadow: 0 2px 10px rgba(0,0,0,0.1); }
+        .modal-header { background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: white; }
+        .modal-header .btn-close { filter: brightness(0) invert(1); }
+    </style>
+</head>
+<body>
+    <div class="container-fluid">
+        <div class="row">
+            <!-- Include Sidebar Fragment -->
+            <div th:replace="~{admin/fragments/sidebar :: sidebar('search-history')}"></div>
+
+            <main class="main-content col-md-10">
+                <div class="d-flex justify-content-between pt-3 pb-2 mb-3 border-bottom">
+                    <h1 class="h2">Quản lý Search History</h1>
+                    <button class="btn btn-danger" onclick="clearAll()">
+                        <i class="fas fa-trash me-2"></i>Xóa tất cả
+                    </button>
+                </div>
+
+                <div class="card">
+                    <div class="card-body">
+                        <table class="table table-hover">
+                            <thead>
+                                <tr>
+                                    <th>User ID</th>
+                                    <th>Từ khóa tìm kiếm</th>
+                                    <th>Thời gian</th>
+                                    <th>Hành động</th>
+                                </tr>
+                            </thead>
+                            <tbody id="dataTableBody"></tbody>
+                        </table>
+                    </div>
+                </div>
+            </main>
+        </div>
+    </div>
+
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+    <script>
+        const token = localStorage.getItem('token');
+
+        function logout() {
+            localStorage.clear();
+            window.location.href = '/login';
+        }
+
+        async function loadData() {
+            try {
+                const response = await fetch('/api/admin/search-history', {
+                    headers: { 'Authorization': 'Bearer ' + token }
+                });
+                const data = await response.json();
+                
+                const tbody = document.getElementById('dataTableBody');
+                tbody.innerHTML = '';
+                
+                // Sort by createdAt desc
+                const sorted = data.data.sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt));
+                
+                sorted.forEach(history => {
+                    tbody.innerHTML += `
+                        <tr>
+                            <td>${history.userId}</td>
+                            <td><strong>${history.searchQuery}</strong></td>
+                            <td>${new Date(history.createdAt).toLocaleString('vi-VN')}</td>
+                            <td>
+                                <button class="btn btn-sm btn-danger" onclick="deleteItem('${history.historyId}')">
+                                    <i class="fas fa-trash"></i>
+                                </button>
+                            </td>
+                        </tr>
+                    `;
+                });
+            } catch (error) {
+                console.error('Error:', error);
+            }
+        }
+
+        async function deleteItem(id) {
+            if (!confirm('Bạn có chắc muốn xóa lịch sử tìm kiếm này?')) return;
+            
+            try {
+                const response = await fetch(`/api/admin/search-history/${id}`, {
+                    method: 'DELETE',
+                    headers: { 'Authorization': 'Bearer ' + token }
+                });
+                
+                if (response.ok) {
+                    loadData();
+                    alert('Xóa thành công!');
+                }
+            } catch (error) {
+                console.error('Error:', error);
+                alert('Có lỗi xảy ra!');
+            }
+        }
+
+        async function clearAll() {
+            if (!confirm('Bạn có chắc muốn xóa TẤT CẢ lịch sử tìm kiếm?')) return;
+            
+            try {
+                const response = await fetch('/api/admin/search-history', {
+                    headers: { 'Authorization': 'Bearer ' + token }
+                });
+                const data = await response.json();
+                
+                // Delete all items
+                for (const history of data.data) {
+                    await fetch(`/api/admin/search-history/${history.historyId}`, {
+                        method: 'DELETE',
+                        headers: { 'Authorization': 'Bearer ' + token }
+                    });
+                }
+                
+                loadData();
+                alert('Xóa tất cả thành công!');
+            } catch (error) {
+                console.error('Error:', error);
+                alert('Có lỗi xảy ra!');
+            }
+        }
+
+        document.addEventListener('DOMContentLoaded', loadData);
+    </script>
+</body>
+</html>

@@ -1,0 +1,249 @@
+<!DOCTYPE html>
+<html lang="vi" xmlns:th="http://www.thymeleaf.org">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Quản lý Categories</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <style>
+        body { background-color: #f8f9fa; }
+        .sidebar {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            color: white;
+        }
+        .sidebar .nav-link {
+            color: rgba(255,255,255,0.8);
+            padding: 15px 20px;
+            transition: all 0.3s;
+        }
+        .sidebar .nav-link:hover {
+            color: white;
+            background-color: rgba(255,255,255,0.1);
+        }
+        .card {
+            border: none;
+            border-radius: 10px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+        }
+    </style>
+</head>
+<body>
+    <div class="container-fluid">
+        <div class="row">
+            <!-- Include Sidebar Fragment -->
+            <div th:replace="~{admin/fragments/sidebar :: sidebar('categories')}"></div>
+
+            <main class="col-md-10 ms-sm-auto px-md-4">
+                <div class="d-flex justify-content-between flex-wrap flex-md-nowrap align-items-center pt-3 pb-2 mb-3 border-bottom">
+                    <h1 class="h2">Quản lý Categories</h1>
+                    <button class="btn btn-primary" onclick="showAddModal()">
+                        <i class="fas fa-plus me-2"></i>Thêm Category
+                    </button>
+                </div>
+
+                <div class="card">
+                    <div class="card-body">
+                        <table class="table table-hover">
+                            <thead>
+                                <tr>
+                                    <th>Hình ảnh</th>
+                                    <th>Tên</th>
+                                    <th>Mô tả</th>
+                                    <th>Parent Category</th>
+                                    <th>Trạng thái</th>
+                                    <th>Ngày tạo</th>
+                                    <th>Hành động</th>
+                                </tr>
+                            </thead>
+                            <tbody id="categoryTableBody"></tbody>
+                        </table>
+                    </div>
+                </div>
+            </main>
+        </div>
+    </div>
+
+    <div class="modal fade" id="categoryModal" tabindex="-1">
+        <div class="modal-dialog">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title" id="modalTitle">Thêm Category</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                </div>
+                <div class="modal-body">
+                    <form id="categoryForm">
+                        <input type="hidden" id="categoryId">
+                        <div class="mb-3">
+                            <label class="form-label">Tên category</label>
+                            <input type="text" class="form-control" id="categoryName" required>
+                        </div>
+                        <div class="mb-3">
+                            <label class="form-label">Mô tả</label>
+                            <textarea class="form-control" id="description" rows="3"></textarea>
+                        </div>
+                        <div class="mb-3">
+                            <label class="form-label">Parent Category ID</label>
+                            <input type="text" class="form-control" id="parentCategoryId" placeholder="Để trống nếu là category gốc">
+                        </div>
+                        <div class="mb-3">
+                            <label class="form-label">Image URL</label>
+                            <input type="text" class="form-control" id="imageUrl">
+                            <small class="text-muted">Preview:</small>
+                            <img id="imagePreview" src="" style="width:100px;height:100px;object-fit:cover;border-radius:5px;margin-top:5px;display:none;">
+                        </div>
+                        <div class="mb-3">
+                            <label class="form-label">Trạng thái</label>
+                            <select class="form-control" id="isActive">
+                                <option value="true">Active</option>
+                                <option value="false">Inactive</option>
+                            </select>
+                        </div>
+                    </form>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Đóng</button>
+                    <button type="button" class="btn btn-primary" onclick="saveCategory()">Lưu</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+    <script>
+        const token = localStorage.getItem('token');
+        let modal;
+
+        function logout() {
+            localStorage.clear();
+            window.location.href = '/login';
+        }
+
+        async function loadCategories() {
+            try {
+                const response = await fetch('/api/admin/categories', {
+                    headers: { 'Authorization': 'Bearer ' + token }
+                });
+                const data = await response.json();
+                
+                const tbody = document.getElementById('categoryTableBody');
+                tbody.innerHTML = '';
+                
+                data.data.forEach(cat => {
+                    tbody.innerHTML += `
+                        <tr>
+                            <td><img src="${cat.imageUrl || 'https://via.placeholder.com/50'}" style="width:50px;height:50px;object-fit:cover;border-radius:5px;" onerror="this.src='https://via.placeholder.com/50'"></td>
+                            <td>${cat.categoryName}</td>
+                            <td>${cat.description || '-'}</td>
+                            <td>${cat.parentCategoryId || '-'}</td>
+                            <td><span class="badge ${cat.isActive ? 'bg-success' : 'bg-secondary'}">${cat.isActive ? 'Active' : 'Inactive'}</span></td>
+                            <td>${new Date(cat.createdAt).toLocaleDateString('vi-VN')}</td>
+                            <td>
+                                <button class="btn btn-sm btn-warning" onclick="editCategory('${cat.categoryId}')">
+                                    <i class="fas fa-edit"></i>
+                                </button>
+                                <button class="btn btn-sm btn-danger" onclick="deleteCategory('${cat.categoryId}')">
+                                    <i class="fas fa-trash"></i>
+                                </button>
+                            </td>
+                        </tr>
+                    `;
+                });
+            } catch (error) {
+                console.error('Error:', error);
+            }
+        }
+
+        function showAddModal() {
+            document.getElementById('modalTitle').textContent = 'Thêm Category';
+            document.getElementById('categoryForm').reset();
+            document.getElementById('categoryId').value = '';
+            modal = new bootstrap.Modal(document.getElementById('categoryModal'));
+            modal.show();
+        }
+
+        async function editCategory(id) {
+            try {
+                const response = await fetch(`/api/admin/categories/${id}`, {
+                    headers: { 'Authorization': 'Bearer ' + token }
+                });
+                const data = await response.json();
+                const cat = data.data;
+                
+                document.getElementById('modalTitle').textContent = 'Sửa Category';
+                document.getElementById('categoryId').value = cat.categoryId;
+                document.getElementById('categoryName').value = cat.categoryName;
+                document.getElementById('description').value = cat.description || '';
+                document.getElementById('parentCategoryId').value = cat.parentCategoryId || '';
+                document.getElementById('imageUrl').value = cat.imageUrl || '';
+                if(cat.imageUrl) {
+                    document.getElementById('imagePreview').src = cat.imageUrl;
+                    document.getElementById('imagePreview').style.display = 'block';
+                }
+                document.getElementById('isActive').value = cat.isActive;
+                
+                modal = new bootstrap.Modal(document.getElementById('categoryModal'));
+                modal.show();
+            } catch (error) {
+                console.error('Error:', error);
+            }
+        }
+
+        async function saveCategory() {
+            const categoryId = document.getElementById('categoryId').value;
+            const data = {
+                categoryName: document.getElementById('categoryName').value,
+                description: document.getElementById('description').value,
+                parentCategoryId: document.getElementById('parentCategoryId').value || null,
+                imageUrl: document.getElementById('imageUrl').value,
+                isActive: document.getElementById('isActive').value === 'true'
+            };
+            
+            try {
+                const url = categoryId ? `/api/admin/categories/${categoryId}` : '/api/admin/categories';
+                const method = categoryId ? 'PUT' : 'POST';
+                
+                const response = await fetch(url, {
+                    method: method,
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'Authorization': 'Bearer ' + token
+                    },
+                    body: JSON.stringify(data)
+                });
+                
+                if (response.ok) {
+                    modal.hide();
+                    loadCategories();
+                    alert('Lưu thành công!');
+                }
+            } catch (error) {
+                console.error('Error:', error);
+                alert('Có lỗi xảy ra!');
+            }
+        }
+
+        async function deleteCategory(id) {
+            if (!confirm('Bạn có chắc muốn xóa category này?')) return;
+            
+            try {
+                const response = await fetch(`/api/admin/categories/${id}`, {
+                    method: 'DELETE',
+                    headers: { 'Authorization': 'Bearer ' + token }
+                });
+                
+                if (response.ok) {
+                    loadCategories();
+                    alert('Xóa thành công!');
+                }
+            } catch (error) {
+                console.error('Error:', error);
+                alert('Có lỗi xảy ra!');
+            }
+        }
+
+        document.addEventListener('DOMContentLoaded', loadCategories);
+    </script>
+</body>
+</html>
