@@ -5,9 +5,11 @@ import com.student.ecommerce.student.dto.CartItemResponse;
 import com.student.ecommerce.student.entity.Cart;
 import com.student.ecommerce.student.entity.CartItem;
 import com.student.ecommerce.student.entity.Product;
+import com.student.ecommerce.student.entity.User;
 import com.student.ecommerce.student.repository.CartItemRepository;
 import com.student.ecommerce.student.repository.CartRepository;
 import com.student.ecommerce.student.repository.ProductRepository;
+import com.student.ecommerce.student.repository.UserRepository;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -28,19 +30,26 @@ public class CartService {
     @Autowired
     private ProductRepository productRepository;
 
-    public Cart getOrCreateCart(String userId) {
-        Optional<Cart> existingCart = cartRepository.findByUserId(userId);
+    @Autowired
+    private UserRepository userRepository;
+
+    public Cart getOrCreateCart(String email) {
+        // Find user by email to get actual user_id
+        User user = userRepository.findByEmail(email)
+                .orElseThrow(() -> new RuntimeException("User not found"));
+        
+        Optional<Cart> existingCart = cartRepository.findByUserId(user.getUserId());
         if (existingCart.isPresent()) {
             return existingCart.get();
         }
         
         Cart newCart = new Cart();
-        newCart.setUserId(userId);
+        newCart.setUserId(user.getUserId());
         return cartRepository.save(newCart);
     }
 
-    public List<CartItemResponse> getCartItems(String userId) {
-        Cart cart = getOrCreateCart(userId);
+    public List<CartItemResponse> getCartItems(String email) {
+        Cart cart = getOrCreateCart(email);
         List<CartItem> cartItems = cartItemRepository.findByCartId(cart.getCartId());
         
         return cartItems.stream().map(cartItem -> {
@@ -51,13 +60,13 @@ public class CartService {
     }
 
     @Transactional
-    public CartItemResponse addToCart(String userId, AddToCartRequest request) {
+    public CartItemResponse addToCart(String email, AddToCartRequest request) {
         // Validate product exists
         Product product = productRepository.findById(request.getProductId())
                 .orElseThrow(() -> new RuntimeException("Product not found"));
 
         // Get or create cart
-        Cart cart = getOrCreateCart(userId);
+        Cart cart = getOrCreateCart(email);
 
         // Check if item already exists in cart
         Optional<CartItem> existingItem = cartItemRepository
@@ -86,14 +95,19 @@ public class CartService {
     }
 
     @Transactional
-    public CartItemResponse updateCartItem(String userId, String cartItemId, Integer quantity) {
+    public CartItemResponse updateCartItem(String email, String cartItemId, Integer quantity) {
         CartItem cartItem = cartItemRepository.findById(cartItemId)
                 .orElseThrow(() -> new RuntimeException("Cart item not found"));
 
         // Verify cart belongs to user
         Cart cart = cartRepository.findById(cartItem.getCartId())
                 .orElseThrow(() -> new RuntimeException("Cart not found"));
-        if (!cart.getUserId().equals(userId)) {
+        
+        // Get actual user_id from email
+        User user = userRepository.findByEmail(email)
+                .orElseThrow(() -> new RuntimeException("User not found"));
+        
+        if (!cart.getUserId().equals(user.getUserId())) {
             throw new RuntimeException("Unauthorized access to cart");
         }
 
@@ -112,14 +126,19 @@ public class CartService {
     }
 
     @Transactional
-    public void removeFromCart(String userId, String cartItemId) {
+    public void removeFromCart(String email, String cartItemId) {
         CartItem cartItem = cartItemRepository.findById(cartItemId)
                 .orElseThrow(() -> new RuntimeException("Cart item not found"));
 
         // Verify cart belongs to user
         Cart cart = cartRepository.findById(cartItem.getCartId())
                 .orElseThrow(() -> new RuntimeException("Cart not found"));
-        if (!cart.getUserId().equals(userId)) {
+        
+        // Get actual user_id from email
+        User user = userRepository.findByEmail(email)
+                .orElseThrow(() -> new RuntimeException("User not found"));
+        
+        if (!cart.getUserId().equals(user.getUserId())) {
             throw new RuntimeException("Unauthorized access to cart");
         }
 
@@ -127,8 +146,8 @@ public class CartService {
     }
 
     @Transactional
-    public void clearCart(String userId) {
-        Cart cart = getOrCreateCart(userId);
+    public void clearCart(String email) {
+        Cart cart = getOrCreateCart(email);
         cartItemRepository.deleteByCartId(cart.getCartId());
     }
 }

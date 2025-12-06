@@ -44,8 +44,16 @@ public class ProductController {
     }
 
     @GetMapping("/category/{categoryId}")
-    public ResponseEntity<ApiResponse<List<Product>>> getProductsByCategory(@PathVariable String categoryId) {
-        return ResponseEntity.ok(ApiResponse.success(productService.getProductsByCategory(categoryId)));
+    public ResponseEntity<ApiResponse<List<Product>>> getProductsByCategory(
+            @PathVariable String categoryId,
+            @RequestParam(defaultValue = "false") boolean includeSubcategories) {
+        List<Product> products;
+        if (includeSubcategories) {
+            products = productService.getProductsByCategoryWithSubcategories(categoryId);
+        } else {
+            products = productService.getProductsByCategory(categoryId);
+        }
+        return ResponseEntity.ok(ApiResponse.success(products));
     }
 
     @GetMapping("/shop/{shopId}")
@@ -54,8 +62,24 @@ public class ProductController {
     }
 
     @GetMapping("/search")
-    public ResponseEntity<ApiResponse<List<Product>>> searchProducts(@RequestParam String keyword) {
-        return ResponseEntity.ok(ApiResponse.success(productService.searchProducts(keyword)));
+    public ResponseEntity<ApiResponse<List<Product>>> searchProducts(
+            @RequestParam String keyword,
+            @RequestParam(required = false) String categoryId,
+            @RequestParam(required = false) Double minPrice,
+            @RequestParam(required = false) Double maxPrice,
+            @RequestParam(required = false) Integer page,
+            @RequestParam(required = false) Integer size) {
+        try {
+            Pageable pageable = null;
+            if (page != null && size != null) {
+                pageable = PageRequest.of(page, size);
+            }
+
+            List<Product> products = productService.searchProductsAdvanced(keyword, categoryId, minPrice, maxPrice, pageable);
+            return ResponseEntity.ok(ApiResponse.success(products));
+        } catch (Exception e) {
+            return ResponseEntity.badRequest().body(ApiResponse.error(e.getMessage()));
+        }
     }
 
     @PostMapping
