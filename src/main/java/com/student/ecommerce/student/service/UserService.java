@@ -1,15 +1,16 @@
 package com.student.ecommerce.student.service;
 
-import com.student.ecommerce.student.dto.ChangePasswordRequest;
-import com.student.ecommerce.student.dto.UpdateProfileRequest;
-import com.student.ecommerce.student.entity.User;
-import com.student.ecommerce.student.repository.UserRepository;
+import java.util.Optional;
+
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
-import java.util.Optional;
+import com.student.ecommerce.student.dto.ChangePasswordRequest;
+import com.student.ecommerce.student.dto.UpdateProfileRequest;
+import com.student.ecommerce.student.entity.User;
+import com.student.ecommerce.student.repository.UserRepository;
 
 @Service
 public class UserService {
@@ -38,6 +39,9 @@ public class UserService {
         }
         if (request.getPhoneNumber() != null) {
             user.setPhoneNumber(request.getPhoneNumber());
+        }
+        if (request.getEmail() != null) {
+            user.setEmail(request.getEmail());
         }
         if (request.getAvatarUrl() != null) {
             user.setAvatarUrl(request.getAvatarUrl());

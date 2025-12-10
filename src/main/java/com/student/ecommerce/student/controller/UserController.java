@@ -1,16 +1,23 @@
 package com.student.ecommerce.student.controller;
 
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.http.ResponseEntity;
+import org.springframework.security.core.Authentication;
+import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.PostMapping;
+import org.springframework.web.bind.annotation.PutMapping;
+import org.springframework.web.bind.annotation.RequestBody;
+import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RequestParam;
+import org.springframework.web.bind.annotation.RestController;
+import org.springframework.web.multipart.MultipartFile;
+
 import com.student.ecommerce.student.dto.ApiResponse;
 import com.student.ecommerce.student.dto.ChangePasswordRequest;
 import com.student.ecommerce.student.dto.UpdateProfileRequest;
 import com.student.ecommerce.student.entity.User;
 import com.student.ecommerce.student.service.CloudinaryService;
 import com.student.ecommerce.student.service.UserService;
-import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.http.ResponseEntity;
-import org.springframework.security.core.Authentication;
-import org.springframework.web.bind.annotation.*;
-import org.springframework.web.multipart.MultipartFile;
 
 @RestController
 @RequestMapping("/api/user")
@@ -63,9 +70,11 @@ public class UserController {
 
     @PostMapping("/upload-avatar")
     public ResponseEntity<ApiResponse<String>> uploadAvatar(
-            @RequestParam("file") MultipartFile file) {
+           Authentication authentication, @RequestParam("file") MultipartFile file) {
         try {
+            String email = authentication.getName();
             String avatarUrl = cloudinaryService.uploadImage(file);
+            userService.updateProfile(email, new UpdateProfileRequest(null, null, null, avatarUrl));
             return ResponseEntity.ok(ApiResponse.success("Avatar uploaded successfully", avatarUrl));
         } catch (Exception e) {
             return ResponseEntity.badRequest().body(ApiResponse.error("Failed to upload avatar: " + e.getMessage()));
